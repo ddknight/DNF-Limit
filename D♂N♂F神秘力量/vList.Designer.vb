@@ -25,11 +25,6 @@ Partial Class vList
         Me.components = New System.ComponentModel.Container()
         Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(vList))
         Me.Exl = New System.Windows.Forms.DataGridView()
-        Me.ContextMenuStrip1 = New System.Windows.Forms.ContextMenuStrip(Me.components)
-        Me.设置ToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
-        Me.添加组件ToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
-        Me.删除组件ToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
-        Me.Log = New System.Windows.Forms.TextBox()
         Me.ID = New System.Windows.Forms.DataGridViewTextBoxColumn()
         Me.MyName = New System.Windows.Forms.DataGridViewTextBoxColumn()
         Me.Status = New System.Windows.Forms.DataGridViewTextBoxColumn()
@@ -39,6 +34,14 @@ Partial Class vList
         Me.ReadWrite_Action = New System.Windows.Forms.DataGridViewButtonColumn()
         Me.IFEO_Action = New System.Windows.Forms.DataGridViewButtonColumn()
         Me.File_Path = New System.Windows.Forms.DataGridViewTextBoxColumn()
+        Me.ContextMenuStrip1 = New System.Windows.Forms.ContextMenuStrip(Me.components)
+        Me.设置ToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
+        Me.IFEO模式ToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
+        Me.文件读写模式ToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
+        Me.禁用ToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
+        Me.添加组件ToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
+        Me.删除组件ToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
+        Me.Log = New System.Windows.Forms.TextBox()
         CType(Me.Exl, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.ContextMenuStrip1.SuspendLayout()
         Me.SuspendLayout()
@@ -61,43 +64,6 @@ Partial Class vList
         Me.Exl.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect
         Me.Exl.Size = New System.Drawing.Size(568, 249)
         Me.Exl.TabIndex = 0
-        '
-        'ContextMenuStrip1
-        '
-        Me.ContextMenuStrip1.Items.AddRange(New System.Windows.Forms.ToolStripItem() {Me.设置ToolStripMenuItem, Me.添加组件ToolStripMenuItem, Me.删除组件ToolStripMenuItem})
-        Me.ContextMenuStrip1.Name = "ContextMenuStrip1"
-        Me.ContextMenuStrip1.Size = New System.Drawing.Size(119, 70)
-        '
-        '设置ToolStripMenuItem
-        '
-        Me.设置ToolStripMenuItem.Name = "设置ToolStripMenuItem"
-        Me.设置ToolStripMenuItem.Size = New System.Drawing.Size(118, 22)
-        Me.设置ToolStripMenuItem.Text = "设置"
-        '
-        '添加组件ToolStripMenuItem
-        '
-        Me.添加组件ToolStripMenuItem.Name = "添加组件ToolStripMenuItem"
-        Me.添加组件ToolStripMenuItem.Size = New System.Drawing.Size(118, 22)
-        Me.添加组件ToolStripMenuItem.Text = "添加组件"
-        '
-        '删除组件ToolStripMenuItem
-        '
-        Me.删除组件ToolStripMenuItem.Name = "删除组件ToolStripMenuItem"
-        Me.删除组件ToolStripMenuItem.Size = New System.Drawing.Size(118, 22)
-        Me.删除组件ToolStripMenuItem.Text = "删除组件"
-        '
-        'Log
-        '
-        Me.Log.Anchor = CType(((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Left) _
-                    Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
-        Me.Log.Location = New System.Drawing.Point(12, 267)
-        Me.Log.Multiline = True
-        Me.Log.Name = "Log"
-        Me.Log.ReadOnly = True
-        Me.Log.ScrollBars = System.Windows.Forms.ScrollBars.Both
-        Me.Log.Size = New System.Drawing.Size(568, 94)
-        Me.Log.TabIndex = 1
-        Me.Log.WordWrap = False
         '
         'ID
         '
@@ -154,6 +120,62 @@ Partial Class vList
         Me.File_Path.Name = "File_Path"
         Me.File_Path.ReadOnly = True
         '
+        'ContextMenuStrip1
+        '
+        Me.ContextMenuStrip1.Items.AddRange(New System.Windows.Forms.ToolStripItem() {Me.设置ToolStripMenuItem, Me.添加组件ToolStripMenuItem, Me.删除组件ToolStripMenuItem})
+        Me.ContextMenuStrip1.Name = "ContextMenuStrip1"
+        Me.ContextMenuStrip1.Size = New System.Drawing.Size(119, 70)
+        '
+        '设置ToolStripMenuItem
+        '
+        Me.设置ToolStripMenuItem.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.IFEO模式ToolStripMenuItem, Me.文件读写模式ToolStripMenuItem, Me.禁用ToolStripMenuItem})
+        Me.设置ToolStripMenuItem.Name = "设置ToolStripMenuItem"
+        Me.设置ToolStripMenuItem.Size = New System.Drawing.Size(118, 22)
+        Me.设置ToolStripMenuItem.Text = "设置默认"
+        '
+        'IFEO模式ToolStripMenuItem
+        '
+        Me.IFEO模式ToolStripMenuItem.Name = "IFEO模式ToolStripMenuItem"
+        Me.IFEO模式ToolStripMenuItem.Size = New System.Drawing.Size(142, 22)
+        Me.IFEO模式ToolStripMenuItem.Text = "IFEO模式"
+        '
+        '文件读写模式ToolStripMenuItem
+        '
+        Me.文件读写模式ToolStripMenuItem.Name = "文件读写模式ToolStripMenuItem"
+        Me.文件读写模式ToolStripMenuItem.Size = New System.Drawing.Size(142, 22)
+        Me.文件读写模式ToolStripMenuItem.Text = "文件读写模式"
+        '
+        '禁用ToolStripMenuItem
+        '
+        Me.禁用ToolStripMenuItem.Name = "禁用ToolStripMenuItem"
+        Me.禁用ToolStripMenuItem.Size = New System.Drawing.Size(142, 22)
+        Me.禁用ToolStripMenuItem.Text = "禁用"
+        '
+        '添加组件ToolStripMenuItem
+        '
+        Me.添加组件ToolStripMenuItem.Name = "添加组件ToolStripMenuItem"
+        Me.添加组件ToolStripMenuItem.Size = New System.Drawing.Size(118, 22)
+        Me.添加组件ToolStripMenuItem.Text = "添加组件"
+        '
+        '删除组件ToolStripMenuItem
+        '
+        Me.删除组件ToolStripMenuItem.Name = "删除组件ToolStripMenuItem"
+        Me.删除组件ToolStripMenuItem.Size = New System.Drawing.Size(118, 22)
+        Me.删除组件ToolStripMenuItem.Text = "删除组件"
+        '
+        'Log
+        '
+        Me.Log.Anchor = CType(((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Left) _
+                    Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
+        Me.Log.Location = New System.Drawing.Point(12, 267)
+        Me.Log.Multiline = True
+        Me.Log.Name = "Log"
+        Me.Log.ReadOnly = True
+        Me.Log.ScrollBars = System.Windows.Forms.ScrollBars.Both
+        Me.Log.Size = New System.Drawing.Size(568, 94)
+        Me.Log.TabIndex = 1
+        Me.Log.WordWrap = False
+        '
         'vList
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 12.0!)
@@ -186,4 +208,7 @@ Partial Class vList
     Friend WithEvents ReadWrite_Action As System.Windows.Forms.DataGridViewButtonColumn
     Friend WithEvents IFEO_Action As System.Windows.Forms.DataGridViewButtonColumn
     Friend WithEvents File_Path As System.Windows.Forms.DataGridViewTextBoxColumn
+    Friend WithEvents IFEO模式ToolStripMenuItem As System.Windows.Forms.ToolStripMenuItem
+    Friend WithEvents 文件读写模式ToolStripMenuItem As System.Windows.Forms.ToolStripMenuItem
+    Friend WithEvents 禁用ToolStripMenuItem As System.Windows.Forms.ToolStripMenuItem
 End Class

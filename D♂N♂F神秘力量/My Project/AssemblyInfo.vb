@@ -12,10 +12,10 @@ Imports System.Runtime.InteropServices
 <Assembly: AssemblyDescription("")> 
 <Assembly: AssemblyCompany("")> 
 <Assembly: AssemblyProduct("D♂N♂F神秘力量")> 
-<Assembly: AssemblyCopyright("Copyright ©  2018")> 
+<Assembly: AssemblyCopyright("Copyright ©  2018-2019")> 
 <Assembly: AssemblyTrademark("")> 
 
-<Assembly: ComVisible(False)>
+<Assembly: ComVisible(False)> 
 
 '如果此项目向 COM 公开，则下列 GUID 用于类型库的 ID
 <Assembly: Guid("0bcf2374-e231-404c-81c6-9f446f2cbfde")> 
@@ -31,5 +31,5 @@ Imports System.Runtime.InteropServices
 ' 方法是按如下所示使用“*”:
 ' <Assembly: AssemblyVersion("1.0.*")> 
 
-<Assembly: AssemblyVersion("0.0.2.3")> 
-<Assembly: AssemblyFileVersion("0.0.2.3")> 
+<Assembly: AssemblyVersion("0.0.2.5")> 
+<Assembly: AssemblyFileVersion("0.0.2.5")> 

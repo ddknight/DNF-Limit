@@ -25,6 +25,8 @@ Partial Class Main
         Me.components = New System.ComponentModel.Container()
         Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(Main))
         Me.GroupBox1 = New System.Windows.Forms.GroupBox()
+        Me.Button15 = New System.Windows.Forms.Button()
+        Me.Button14 = New System.Windows.Forms.Button()
         Me.Button6 = New System.Windows.Forms.Button()
         Me.Button5 = New System.Windows.Forms.Button()
         Me.Button3 = New System.Windows.Forms.Button()
@@ -34,6 +36,7 @@ Partial Class Main
         Me.GamePath = New System.Windows.Forms.TextBox()
         Me.Label1 = New System.Windows.Forms.Label()
         Me.GroupBox2 = New System.Windows.Forms.GroupBox()
+        Me.Button16 = New System.Windows.Forms.Button()
         Me.Button13 = New System.Windows.Forms.Button()
         Me.Button12 = New System.Windows.Forms.Button()
         Me.Button11 = New System.Windows.Forms.Button()
@@ -47,7 +50,6 @@ Partial Class Main
         Me.关闭ToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.AutoKill_GameLoader = New System.Windows.Forms.Timer(Me.components)
         Me.AutoKill_Kill = New System.Windows.Forms.Timer(Me.components)
-        Me.Button14 = New System.Windows.Forms.Button()
         Me.GroupBox1.SuspendLayout()
         Me.GroupBox2.SuspendLayout()
         Me.ContextMenuStrip1.SuspendLayout()
@@ -58,6 +60,7 @@ Partial Class Main
         Me.GroupBox1.Anchor = CType((((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Bottom) _
                     Or System.Windows.Forms.AnchorStyles.Left) _
                     Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
+        Me.GroupBox1.Controls.Add(Me.Button15)
         Me.GroupBox1.Controls.Add(Me.Button14)
         Me.GroupBox1.Controls.Add(Me.Button6)
         Me.GroupBox1.Controls.Add(Me.Button5)
@@ -73,6 +76,25 @@ Partial Class Main
         Me.GroupBox1.TabIndex = 0
         Me.GroupBox1.TabStop = False
         Me.GroupBox1.Text = "TX全家桶"
+        '
+        'Button15
+        '
+        Me.Button15.Location = New System.Drawing.Point(580, 76)
+        Me.Button15.Name = "Button15"
+        Me.Button15.Size = New System.Drawing.Size(90, 23)
+        Me.Button15.TabIndex = 11
+        Me.Button15.Text = "暴力禁用模式"
+        Me.Button15.UseVisualStyleBackColor = True
+        '
+        'Button14
+        '
+        Me.Button14.Anchor = CType((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
+        Me.Button14.Location = New System.Drawing.Point(515, 18)
+        Me.Button14.Name = "Button14"
+        Me.Button14.Size = New System.Drawing.Size(75, 23)
+        Me.Button14.TabIndex = 10
+        Me.Button14.Text = "自动查找"
+        Me.Button14.UseVisualStyleBackColor = True
         '
         'Button6
         '
@@ -114,9 +136,9 @@ Partial Class Main
         Me.Button2.Font = New System.Drawing.Font("宋体", 9.0!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(134, Byte))
         Me.Button2.Location = New System.Drawing.Point(6, 76)
         Me.Button2.Name = "Button2"
-        Me.Button2.Size = New System.Drawing.Size(665, 23)
+        Me.Button2.Size = New System.Drawing.Size(568, 23)
         Me.Button2.TabIndex = 6
-        Me.Button2.Text = "一键禁用"
+        Me.Button2.Text = "一键禁用(全家桶组件)"
         Me.Button2.UseVisualStyleBackColor = True
         '
         'Button1
@@ -163,6 +185,7 @@ Partial Class Main
         Me.GroupBox2.Anchor = CType((((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Bottom) _
                     Or System.Windows.Forms.AnchorStyles.Left) _
                     Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
+        Me.GroupBox2.Controls.Add(Me.Button16)
         Me.GroupBox2.Controls.Add(Me.Button13)
         Me.GroupBox2.Controls.Add(Me.Button12)
         Me.GroupBox2.Controls.Add(Me.Button11)
@@ -176,6 +199,16 @@ Partial Class Main
         Me.GroupBox2.TabIndex = 1
         Me.GroupBox2.TabStop = False
         Me.GroupBox2.Text = "附加功能"
+        '
+        'Button16
+        '
+        Me.Button16.Anchor = CType((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
+        Me.Button16.Location = New System.Drawing.Point(329, 49)
+        Me.Button16.Name = "Button16"
+        Me.Button16.Size = New System.Drawing.Size(342, 23)
+        Me.Button16.TabIndex = 7
+        Me.Button16.Text = "[解决卡频道/黑屏]重置配置文件"
+        Me.Button16.UseVisualStyleBackColor = True
         '
         'Button13
         '
@@ -195,7 +228,7 @@ Partial Class Main
         Me.Button12.Name = "Button12"
         Me.Button12.Size = New System.Drawing.Size(316, 23)
         Me.Button12.TabIndex = 5
-        Me.Button12.Text = "[解决CPU/磁盘占用]禁用TGuard服务"
+        Me.Button12.Text = "[解决CPU/磁盘占用]禁用TGuardSvc服务"
         Me.Button12.UseVisualStyleBackColor = True
         '
         'Button11
@@ -285,16 +318,6 @@ Partial Class Main
         '
         Me.AutoKill_Kill.Interval = 10000
         '
-        'Button14
-        '
-        Me.Button14.Anchor = CType((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
-        Me.Button14.Location = New System.Drawing.Point(515, 18)
-        Me.Button14.Name = "Button14"
-        Me.Button14.Size = New System.Drawing.Size(75, 23)
-        Me.Button14.TabIndex = 10
-        Me.Button14.Text = "自动查找"
-        Me.Button14.UseVisualStyleBackColor = True
-        '
         'Main
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 12.0!)
@@ -338,5 +361,7 @@ Partial Class Main
     Friend WithEvents 关闭ToolStripMenuItem As System.Windows.Forms.ToolStripMenuItem
     Friend WithEvents AutoKill_Kill As System.Windows.Forms.Timer
     Friend WithEvents Button14 As System.Windows.Forms.Button
+    Friend WithEvents Button15 As System.Windows.Forms.Button
+    Friend WithEvents Button16 As System.Windows.Forms.Button
 
 End Class

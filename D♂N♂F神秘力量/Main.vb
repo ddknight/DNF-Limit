@@ -23,34 +23,12 @@
         Else
             GamePath.Text = Find_DNF_Path()
         End If
-
-        Try
-            vData = Get_Currend_File_String()
-        Catch ex As Exception
-
-        End Try
-        If vData Is Nothing Then
-            Dim vstring() As String = My.Resources.list.Split(vbCrLf)
-            Dim vstring2() As String
-            ReDim vData(vstring.Length - 1)
-            For i = 0 To vstring.Length - 1
-                Try
-                    vstring2 = vstring(i).Split("|")
-                    vData(i).Name = vstring2(1)
-                    vData(i).Path = vstring2(3)
-                    vData(i).Info = vstring2(4)
-                    vData(i).Value = CBool(vstring2(2))
-                Catch ex As Exception
-
-                End Try
-            Next
-            Try
-                IO.File.WriteAllText(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "\" + Application.ProductName + "\list.ini", My.Resources.list, System.Text.Encoding.Unicode)
-            Catch ex As Exception
-
-            End Try
+        If IO.File.Exists(INI_Path) Then
+            vData = String_to_Data(IO.File.ReadAllText(INI_Path))
+        Else
+            vData = String_to_Data("")
         End If
-        If vData.Length < 3 Then vData = Get_Currend_File_String(True)
+
         CanIFEO = Check_IFEO_Permission()
         'If CanIFEO = False Then MsgBox("权限不足，将采用[文件读写]模式" + vbCrLf + "[更新游戏]需要[恢复]！！！" + vbCrLf + "详情参阅帮助")
         Set_Application_Title()
@@ -91,32 +69,49 @@
         Dim sData As My_Data_Type
         For i = 0 To vList.Exl.Rows.Count - 1
             sData = vData(vList.Exl.Rows(i).Cells(0).Value)
-            If sData.Value = False Then Continue For
+            'If sData.Value = False Then Continue For
             PPrint("执行禁用[" + sData.Name + "]")
-            If CanIFEO Then
-                If Set_IFEO(sData.Name, False, VoCytDefenderEx_Path, MyException) Then
-                    PAppend("[成功]")
-                Else
-                    PAppend("[失败][" + MyException.Message + "][转用常规模式(NTFS权限)]")
+
+            Select Case sData.Value
+                Case 0
+                    PAppend("[跳过]")
+                Case 1
                     Bad = True
                     If Set_File_Security(GamePath.Text + "\" + sData.Path, False, MyException) Then
                         PAppend("[成功]")
                     Else
                         PAppend("[失败][" + MyException.Message + "]")
                     End If
-                End If
-            Else
-                Bad = True
-                If Set_File_Security(GamePath.Text + "\" + sData.Path, False, MyException) Then
-                    PAppend("[成功]")
-                Else
-                    PAppend("[失败][" + MyException.Message + "]")
-                End If
-            End If
+                Case 2
+                    If CanIFEO Then
+                        If Set_IFEO(sData.Name, False, VCD_Path, MyException) Then
+                            PAppend("[成功]")
+                        Else
+                            PAppend("[失败][" + MyException.Message + "][转用常规模式(NTFS权限)]")
+                            Bad = True
+                            If Set_File_Security(GamePath.Text + "\" + sData.Path, False, MyException) Then
+                                PAppend("[成功]")
+                            Else
+                                PAppend("[失败][" + MyException.Message + "]")
+                            End If
+                        End If
+                    Else
+                        Bad = True
+                        If Set_File_Security(GamePath.Text + "\" + sData.Path, False, MyException) Then
+                            PAppend("[成功]")
+                        Else
+                            PAppend("[失败][" + MyException.Message + "]")
+                        End If
+                    End If
+                    
+            End Select
+
         Next
         vList.Check_Status(False)
         PAppend("执行结束")
-        If Bad = True Then MsgBox("部分插件采用[文件读写]模式禁用，更新游戏建议还原插件，详情参阅[帮助]")
+        If Bad = True Then PAppend("部分插件采用[文件读写]模式禁用，更新游戏建议还原插件，详情参阅[帮助]")
+        vMSG.Button1.Text = "停止并禁用TGuardSvc服务"
+        vMSG.Button1_Click(Me, e)
     End Sub
 
     Private Sub Button3_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles Button3.Click
@@ -137,7 +132,7 @@
                 b1 = Set_File_Security(GamePath.Text + "\" + sData.Path, True, Ex1)
             End If
             If sData.CanRun = False Then
-                b2 = Set_IFEO(sData.Name, True, VoCytDefenderEx_Path, Ex2)
+                b2 = Set_IFEO(sData.Name, True, VCD_Path, Ex2)
             End If
             If b1 And b2 Then
                 PAppend("[成功]")
@@ -164,9 +159,6 @@
         Else
             InDataGridView.Rows.Add(Index, InData.Name, ctxt(InData.CanRead And InData.CanWrite), ctxt(InData.CanRead And InData.CanWrite), "不支持", InData.Info, B1, "不支持", InData.Path)
         End If
-
-
-
     End Sub
     Private Sub Button5_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles Button5.Click
         vList.Set_Window(800, 600, True)
@@ -327,14 +319,19 @@
     End Sub
 
     Private Sub Timer1_Tick(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles AutoKill_GameLoader.Tick
+
+        Try
+            If Process_dnf IsNot Nothing Then
+                If Process_dnf.HasExited = False Then Exit Sub
+            End If
+        Catch ex As Exception
+        End Try
         Dim vProcess() As Process = Process.GetProcesses
-        'Dim sProcess() As Process
         Try
             Select Case Auto_Kill_Gameloader_Flag
                 Case 0
                     For Each vline As Process In vProcess
                         Select Case vline.ProcessName.ToLower
-
                             Case "teniodl", "gameloader" ', "tesservice"
                                 NotifyIcon1.ShowBalloonTip(2000, "提示", "检测到" + vline.ProcessName + "启动", ToolTipIcon.Info)
                                 Auto_Kill_Gameloader_Flag = 1
@@ -360,12 +357,13 @@
                                     AutoKill_Kill.Start()
                                     AutoKill_GameLoader.Interval = 5000
                                     Auto_Kill_Gameloader_Flag = 0
+                                    Process_dnf = vline
                                 End If
                         End Select
                     Next
             End Select
         Catch ex As Exception
-            NotifyIcon1.ShowBalloonTip(2000, "错误", ex.Message, ToolTipIcon.Error)
+            'NotifyIcon1.ShowBalloonTip(2000, "错误", ex.Message, ToolTipIcon.Error)
         End Try
 
 
@@ -411,15 +409,18 @@
                                         vline2.Kill()
                                         NotifyIcon1.ShowBalloonTip(2000, "提示", "结束" + vline2.ProcessName + "成功", ToolTipIcon.Info)
                                     Catch ex2 As Exception
-                                        NotifyIcon1.ShowBalloonTip(2000, "警告", "结束" + vline2.ProcessName + "失败" + vbCrLf + ex2.Message, ToolTipIcon.Warning)
+                                        'NotifyIcon1.ShowBalloonTip(2000, "警告", "结束" + vline2.ProcessName + "失败" + vbCrLf + ex2.Message, ToolTipIcon.Warning)
                                     End Try
                                 End If
                             End If
                         Next
+                    Case "tguardsvc", "tguard"
+                        vMSG.Disable_TGuardSvc()
+                        NotifyIcon1.ShowBalloonTip(2000, "提示", "禁用TGuardSvc服务", ToolTipIcon.Info)
                 End Select
             Next
         Catch ex As Exception
-            NotifyIcon1.ShowBalloonTip(2000, "错误", ex.Message, ToolTipIcon.Error)
+            'NotifyIcon1.ShowBalloonTip(2000, "错误", ex.Message, ToolTipIcon.Error)
         End Try
         AutoKill_Kill.Stop()
         AutoKill_GameLoader.Start()
@@ -443,5 +444,58 @@
         Else
             GamePath.Text = str
         End If
+    End Sub
+
+    Private Sub Button15_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles Button15.Click
+        If MsgBox("暴力模式会扫描DNF目录下所有相关的全家桶组件并禁用，有可能会造成游戏无法启动" + vbCrLf + vbCrLf + _
+                  "如提示：您的游戏环境异常，请重启机器后再试" + vbCrLf + vbCrLf + _
+                  "如提示异常,或者相关组件(如连发)不可用，请进入[手动模式]，还原相关插件，或者点击[一键还原]" + _
+                  vbCrLf + vbCrLf + "是否使用暴力禁用？", MsgBoxStyle.YesNo) = MsgBoxResult.No Then Exit Sub
+
+        Dim vData_Arraylist = New ArrayList
+        Dim vFile_Keys = New ArrayList
+        For Each vline In Addon_List_String
+            vFile_Keys.Add(vline.ToLower)
+        Next
+
+        Scan_For_Addon(GamePath.Text, vFile_Keys, vData_Arraylist)
+        vData = vData_Arraylist.ToArray(GetType(My_Data_Type))
+        Save_Data()
+        Button2_Click(Me, e)
+
+    End Sub
+
+    Private Sub Button16_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles Button16.Click
+        With vMSG.TextBox1
+            .Clear()
+            .AppendText("该功能将删除DNF默认配置文件：" + vbCrLf)
+            Dim cfgpath As String = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "\.."
+            If IO.File.Exists(cfgpath + "\LocalLow\DNF\DNF.cfg") Then
+                cfgpath = IO.Path.GetFullPath(cfgpath + "\LocalLow\DNF\DNF.cfg")
+                .AppendText(cfgpath + vbCrLf)
+                .AppendText("--------------------" + vbCrLf)
+                .AppendText("配置文件删除后，将初始化下列数据（包括但不限于）：" + vbCrLf)
+                .AppendText("最后一次登录频道" + vbCrLf)
+                .AppendText("游戏窗口设置" + vbCrLf)
+                .AppendText("游戏分辨率设置" + vbCrLf)
+                .AppendText("本地布局" + vbCrLf)
+                vMSG.arg = cfgpath
+                vMSG.Mode = "delcfg"
+            Else
+                If IO.File.Exists(cfgpath + "\Local\DNF\DNF.cfg") Then
+                    cfgpath = IO.Path.GetFullPath(cfgpath + "\Local\DNF\DNF.cfg")
+                Else
+                    .AppendText("配置文件未找到！！" + vbCrLf)
+                    .AppendText("--------------------" + vbCrLf)
+                    .AppendText("通常配置文件位于：" + vbCrLf)
+                    .AppendText("%userprofile%\AppData\LocalLow\DNF" + vbCrLf)
+                    .AppendText("文件名：" + vbCrLf)
+                    .AppendText("DNF.cfg")
+                    vMSG.Mode = ""
+                End If
+            End If
+        End With
+
+        vMSG.Show()
     End Sub
 End Class

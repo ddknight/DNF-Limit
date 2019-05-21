@@ -13,6 +13,12 @@
         Next
     End Sub
     Public Function Check_Status(Optional ByVal Visible As Boolean = True, Optional ByVal Button_Visible As Boolean = False) As Integer
+        Dim vSelectedRows As Integer
+        If Exl.SelectedRows IsNot Nothing Then
+            If Exl.SelectedRows.Count > 0 Then
+                vSelectedRows = Exl.SelectedRows(0).Index
+            End If
+        End If
         Me.Show()
         If Visible Then PClear()
         If Visible Then PAppend("正在检测组件状态")
@@ -31,6 +37,12 @@
         If Visible Then PAppend("优化可视化界面")
         Set_Color()
         If Visible Then PAppend("检查结束")
+
+        If Exl.SelectedRows IsNot Nothing Then
+            If Exl.SelectedRows.Count > 0 Then
+                If vSelectedRows <= Exl.Rows.Count Then Exl.Rows(vSelectedRows).Selected = True
+            End If
+        End If
 
         Return Exl.Rows.Count
     End Function
@@ -59,7 +71,7 @@
                 Else
                     '7
 
-                    If Set_IFEO(Exl.Rows(e.RowIndex).Cells(1).Value.ToString, vEnabled, VoCytDefenderEx_Path, MyException) Then
+                    If Set_IFEO(Exl.Rows(e.RowIndex).Cells(1).Value.ToString, vEnabled, VCD_Path, MyException) Then
                         PAppend("[成功]")
                     Else
                         PAppend("[失败][" + MyException.Message + "]")
@@ -86,27 +98,28 @@
         If e.Button = Windows.Forms.MouseButtons.Right Then
             Exl.Rows(e.RowIndex).Selected = True
             Try
-                If vData(Exl.SelectedRows(0).Cells(0).Value).Value = False Then
-                    ContextMenuStrip1.Items(0).Text = "设置默认[禁用]"
+                IFEO模式ToolStripMenuItem.Checked = False
+                文件读写模式ToolStripMenuItem.Checked = False
+                禁用ToolStripMenuItem.Checked = False
+                If vData(Exl.SelectedRows(0).Cells(0).Value).Name.ToLower.Trim.EndsWith(".exe") Then
+                    IFEO模式ToolStripMenuItem.Enabled = True
                 Else
-                    ContextMenuStrip1.Items(0).Text = "设置默认[不禁用]"
+                    IFEO模式ToolStripMenuItem.Enabled = False
                 End If
+                   
+                Select Case vData(Exl.SelectedRows(0).Cells(0).Value).Value
+                    Case 0
+                        禁用ToolStripMenuItem.Checked = True
+                    Case 1
+                        文件读写模式ToolStripMenuItem.Checked = True
+                    Case 2
+                        IFEO模式ToolStripMenuItem.Checked = True
+                End Select
+
             Catch ex As Exception
 
             End Try
         End If
-    End Sub
-
-    Private Sub 设置ToolStripMenuItem_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles 设置ToolStripMenuItem.Click
-        Try
-            vData(Exl.SelectedRows(0).Cells(0).Value).Value = Not vData(Exl.SelectedRows(0).Cells(0).Value).Value
-            PPrint("设置插件[" + vData(Exl.SelectedRows(0).Cells(0).Value).Name + "]默认")
-            If vData(Exl.SelectedRows(0).Cells(0).Value).Value Then PAppend("[禁用]") Else PAppend("[不禁用]")
-            Save_Data()
-        Catch ex As Exception
-
-        End Try
-
     End Sub
 
     Private Sub 添加组件ToolStripMenuItem_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles 添加组件ToolStripMenuItem.Click
@@ -155,5 +168,59 @@
         Check_Status(False, True)
 
         Save_Data()
+    End Sub
+
+    Private Sub vList_Load(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles MyBase.Load
+        Try
+            Dim DataGridView_Type As Type = Exl.GetType
+            Dim pi As Reflection.PropertyInfo = DataGridView_Type.GetProperty("DoubleBuffered", System.Reflection.BindingFlags.Instance Or System.Reflection.BindingFlags.NonPublic)
+            pi.SetValue(Exl, True, Nothing)
+            PAppend("开启表格双缓冲")
+        Catch ex As Exception
+            PAppend("开启表格双缓冲错误[" + ex.Message + "]")
+        End Try
+    End Sub
+
+    Private Sub IFEO模式ToolStripMenuItem_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles IFEO模式ToolStripMenuItem.Click
+        Try
+            vData(Exl.SelectedRows(0).Cells(0).Value).Value = 2
+            PAppend("设置插件[" + vData(Exl.SelectedRows(0).Cells(0).Value).Name + "]默认[IFEO模式]")
+            Save_Data()
+        Catch ex As Exception
+
+        End Try
+
+    End Sub
+
+    Private Sub 文件读写模式ToolStripMenuItem_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles 文件读写模式ToolStripMenuItem.Click
+        Try
+            vData(Exl.SelectedRows(0).Cells(0).Value).Value = 2
+            PAppend("设置插件[" + vData(Exl.SelectedRows(0).Cells(0).Value).Name + "]默认[文件禁用模式]")
+            Save_Data()
+        Catch ex As Exception
+
+        End Try
+    End Sub
+
+    Private Sub 禁用ToolStripMenuItem_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles 禁用ToolStripMenuItem.Click
+        Try
+            vData(Exl.SelectedRows(0).Cells(0).Value).Value = 2
+            PAppend("设置插件[" + vData(Exl.SelectedRows(0).Cells(0).Value).Name + "]默认[禁用]")
+            Save_Data()
+        Catch ex As Exception
+
+        End Try
+    End Sub
+
+    Private Sub Exl_Sorted(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles Exl.Sorted
+        Dim nData = New ArrayList
+        For i = 0 To Exl.Rows.Count - 1
+            For Each vline In vData
+                If vline.Path = Exl.Rows(i).Cells(8).Value Then
+                    nData.Add(vline)
+                End If
+            Next
+        Next
+        vData = nData.ToArray(GetType(My_Data_Type))
     End Sub
 End Class

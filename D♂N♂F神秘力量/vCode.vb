@@ -1,16 +1,36 @@
 ﻿Module vCode
     Public vData() As My_Data_Type
     Public CanIFEO As Boolean
+    Public Data_Version As Double = 2.4
     Public Update_URL As String = "http://vocyt-dnf-limit.oss-cn-qingdao.aliyuncs.com/application-update"
     Public Update_Page As String = "http://bbs.colg.cn/thread-7393386-1-1.html"
-    Public VoCytDefenderEx_Path As String
+    'Public VoCytDefenderEx_Path As String
     Public Public_ArrayList As ArrayList
-    Public vCurrend_File As String
+    'Public vCurrend_File As String
     Public Hide_Run As Boolean = False
     Public Auto_Kill_Gameloader_Flag As Integer
+    Public Process_dnf As Process
+    Public Path_Info As String = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "\" + Application.ProductName
+    Public INI_Path = Path_Info + "\list.ini"
+    Public VCD_Path = Path_Info + "\VoCytDefenderEx.exe"
+    Public Addon_List_String() As String = {"TP3Helper.exe", _
+                                            "TPHelper.exe", _
+                                            "TPWeb.exe", _
+                                            "tgp_gamead.exe", _
+                                            "AdvertDialog.exe", _
+                                            "AdvertTips.exe", _
+                                            "BackgroundDownloader.exe", _
+                                            "TenSafe.exe", _
+                                            "TPSvc.exe", _
+                                            "qbclient.exe", _
+                                            "DNFADApp.dll", _
+                                            "GameDataPlatformClient.dll", _
+                                            "res.vfs", _
+                                            "DNFTips.dll"}
+
     Public Structure My_Data_Type
         Dim Name As String
-        Dim Value As Boolean
+        Dim Value As Integer
         Dim Path As String
         Dim Info As String
         Dim CanRead As Boolean
@@ -69,32 +89,7 @@
         End Try
         Return ""
     End Function
-    Public Function Get_Currend_File_String(Optional ByVal Direct As Boolean = False) As My_Data_Type()
-        Dim vpath As String = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "\" + Application.ProductName
-        vCurrend_File = vpath + "\list.ini"
-        VoCytDefenderEx_Path = vpath + "\VoCytDefenderEx.exe"
-        If IO.Directory.Exists(vpath) = False Then IO.Directory.CreateDirectory(vpath)
-        If IO.Directory.Exists(VoCytDefenderEx_Path) = False Then IO.File.WriteAllBytes(VoCytDefenderEx_Path, My.Resources.VoCytDefenderEx)
 
-        If (IO.File.Exists(vCurrend_File) = False) And (Direct = False) Then
-            IO.File.WriteAllText(vCurrend_File, My.Resources.list, System.Text.Encoding.Unicode)
-        End If
-        Dim vstring() As String = IO.File.ReadAllText(vCurrend_File, System.Text.Encoding.Unicode).Split(vbCrLf)
-        Dim vstring2() As String
-        Dim vret(vstring.Length - 1) As My_Data_Type
-        For i = 0 To vstring.Length - 1
-            Try
-                vstring2 = vstring(i).Split("|")
-                vret(i).Name = vstring2(1)
-                vret(i).Path = vstring2(3)
-                vret(i).Info = vstring2(4)
-                vret(i).Value = CBool(vstring2(2))
-            Catch ex As Exception
-
-            End Try
-        Next
-        Return vret
-    End Function
     Public Sub Set_Application_Title()
         Main.Text = "D♂N♂F神秘力量 Ver " + Get_Application_Version() + " "
         If CanIFEO Then Main.Text += "[IFEO]" Else Main.Text += "[文件读写]"
@@ -339,18 +334,83 @@
     End Function
     Public Sub Save_Data()
         Try
-            IO.File.Delete(vCurrend_File)
-            Dim vStr As String = ""
+            IO.File.Delete(INI_Path)
+            Dim vStr As String = "Version" + Data_Version.ToString + vbCrLf
             For Each sData As My_Data_Type In vData
-                vStr += "|" + sData.Name + "|" + sData.Value.ToString + "|" + sData.Path + "|" + sData.Info + vbCrLf
+                vStr += sData.Name + "|" + sData.Value.ToString + "|" + sData.Path + "|" + sData.Info + vbCrLf
             Next
-            IO.File.WriteAllText(vCurrend_File, vStr, System.Text.Encoding.Unicode)
+            If vStr.EndsWith(vbCrLf) Then vStr = Left(vStr, vStr.Length - 2)
+            IO.File.WriteAllText(INI_Path, vStr, System.Text.Encoding.UTF8)
         Catch ex As Exception
 
         End Try
     End Sub
+    Public Function String_to_Data(ByVal InString As String) As My_Data_Type()
+        If IO.Directory.Exists(Path_Info) = False Then IO.Directory.CreateDirectory(Path_Info)
+        If IO.Directory.Exists(VCD_Path) = False Then IO.File.WriteAllBytes(VCD_Path, My.Resources.VoCytDefenderEx)
 
-    
+
+        Dim vline() As String = Split(InString, vbCrLf)
+        If vline.Length < 2 Then IO.File.WriteAllText(INI_Path, My.Resources.list, System.Text.Encoding.UTF8) : Return String_to_Data(My.Resources.list)
+        If IsNumeric(vline(0).Replace("Version", "")) = False Then IO.File.WriteAllText(INI_Path, My.Resources.list, System.Text.Encoding.UTF8) : Return String_to_Data(My.Resources.list)
+        If CDbl(vline(0).Replace("Version", "")) < Data_Version Then IO.File.WriteAllText(INI_Path, My.Resources.list, System.Text.Encoding.UTF8) : Return String_to_Data(My.Resources.list)
+        Dim vRet(vline.Length - 2) As My_Data_Type
+        Dim vline_2() As String
+        For i = 0 To vline.Length - 2
+            Try
+                vline_2 = vline(i + 1).Split("|")
+                vRet(i).Name = vline_2(0)
+                vRet(i).Path = vline_2(2)
+                vRet(i).Info = vline_2(3)
+                vRet(i).Value = CInt(vline_2(1))
+            Catch ex As Exception
+
+            End Try
+        Next
+        Return vRet
+
+    End Function
+
+    Public Sub Scan_For_Addon(ByVal path As String, ByVal FileNames As ArrayList, ByRef InData As ArrayList)
+        Dim sg As My_Data_Type
+        For Each vline In IO.Directory.GetFiles(path)
+            If FileNames.Contains(IO.Path.GetFileName(vline).ToLower) Then
+                sg = New My_Data_Type
+                sg.Name = IO.Path.GetFileName(vline)
+                For Each vline2 In Split(My.Resources.list, vbCrLf)
+                    If vline2.ToLower.Contains(sg.Name.ToLower) Then sg.Info = vline2.Split("|")(3)
+                Next
+                If sg.Name = "" Then sg.Name = "自动扫描"
+                sg.Path = ("\" + Mid(vline, Main.GamePath.Text.Length + 1, vline.Length)).Replace("\\", "\")
+
+                Select Case sg.Name.ToLower
+                    Case "tensafe.exe", "tpsvc.exe"
+                        sg.Value = 0
+                    Case "res.vfs"
+                        If sg.Path.ToLower.Contains("Apps\DNFAD".ToLower) _
+                        Or sg.Path.ToLower.Contains("Apps\DNFTips".ToLower) Then
+                            sg.Value = 1
+                        Else
+                            sg.Value = 0
+                        End If
+                    Case "qbclient.exe"
+                        sg.Value = 1
+                    Case Else
+                        If sg.Name.ToLower.EndsWith(".exe") Then
+                            sg.Value = 2
+                        Else
+                            sg.Value = 1
+                        End If
+
+                End Select
+            
+            InData.Add(sg)
+            End If
+        Next
+        For Each vline In IO.Directory.GetDirectories(path)
+            Scan_For_Addon(vline, FileNames, InData)
+        Next
+    End Sub
 End Module
 Class mt
     Public Sub Check_for_Update()
