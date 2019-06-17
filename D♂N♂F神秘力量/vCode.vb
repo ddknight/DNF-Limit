@@ -11,8 +11,8 @@
     Public Auto_Kill_Gameloader_Flag As Integer
     Public Process_dnf As Process
     Public Path_Info As String = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "\" + Application.ProductName
-    Public INI_Path = Path_Info + "\list.ini"
-    Public VCD_Path = Path_Info + "\VoCytDefenderEx.exe"
+    Public INI_Path = Path_Info + ("\list.ini").Replace("\\", "\")
+    Public VCD_Path = (Path_Info + "\VoCytDefenderEx.exe").Replace("\\", "\")
     Public Addon_List_String() As String = {"TP3Helper.exe", _
                                             "TPHelper.exe", _
                                             "TPWeb.exe", _
@@ -93,7 +93,7 @@
     Public Sub Set_Application_Title()
         Main.Text = "D♂N♂F神秘力量 Ver " + Get_Application_Version() + " "
         If CanIFEO Then Main.Text += "[IFEO]" Else Main.Text += "[文件读写]"
-        Main.Text += " Powered by VoCyt"
+        Main.Text += " Powered by VoCyt" '   Alpha Test for 0.0.2.7
     End Sub
     Public Sub Kill_Process()
         Dim s As String = "下列正在运行的程序可能会影响本软件运行，是否关闭？" + vbCrLf + "----------" + vbCrLf
@@ -112,7 +112,11 @@
                 For Each sProcess As Process In vProcess
                     For Each sString As String In vDNF_List
                         If sString.ToLower = sProcess.ProcessName.ToLower Then
-                            sProcess.Kill()
+                            Try
+                                sProcess.Kill()
+                            Catch ex As Exception
+
+                            End Try
                         End If
                     Next
                 Next
@@ -195,28 +199,41 @@
     End Sub
     Public Function Set_File_Security(ByVal vfilefullpath As String, ByVal vEnabled As Boolean, ByRef vEx_Catch As Exception) As Boolean
         Try
-            Dim vfilepath As String = vfilefullpath.Replace("\\", "\")
-            If IO.File.Exists(vfilepath) = False Then Throw New Exception("File not found.")
-            Dim MyFileInfo As IO.FileInfo = New IO.FileInfo(vfilepath)
-            Dim MyFileSecurity As Security.AccessControl.FileSecurity
+            Dim MyObjectSecurity
+            Dim MyObjectInfo
+            'Dim rule_deny
+            'Dim rule_allow
+            If IO.File.Exists(vfilefullpath) Then
+                MyObjectInfo = New IO.FileInfo(vfilefullpath.Replace("\\", "\"))
+                'rule_deny = New Security.AccessControl.FileSystemAccessRule("Everyone", Security.AccessControl.FileSystemRights.FullControl, Security.AccessControl.AccessControlType.Deny)
+                'rule_allow = New Security.AccessControl.FileSystemAccessRule("Everyone", Security.AccessControl.FileSystemRights.FullControl, Security.AccessControl.AccessControlType.Allow)
+            ElseIf IO.Directory.Exists(vfilefullpath) Then
+                MyObjectInfo = New IO.DirectoryInfo(vfilefullpath.Replace("\\", "\"))
+                'rule_deny = New Security.AccessControl.FileSystemAccessRule("Everyone", Security.AccessControl.FileSystemRights.FullControl, Security.AccessControl.AccessControlType.Deny)
+                'rule_allow = New Security.AccessControl.FileSystemAccessRule("Everyone", Security.AccessControl.FileSystemRights.FullControl, Security.AccessControl.AccessControlType.Allow)
+            Else
+                Throw New Exception("File not found.")
+            End If
+            'Dim vfilepath As String = vfilefullpath.Replace("\\", "\")
+            'Dim MyFileInfo As IO.FileInfo = New IO.FileInfo(vfilepath)
+            'Dim MyObjectSecurity As Security.AccessControl.FileSecurity
             Try
-                MyFileSecurity = MyFileInfo.GetAccessControl
+                MyObjectSecurity = MyObjectInfo.GetAccessControl
             Catch ex2 As Exception
                 Take_Owner(vfilefullpath)
-                MyFileSecurity = MyFileInfo.GetAccessControl
+                MyObjectSecurity = MyObjectInfo.GetAccessControl
             End Try
-
 
             Dim rule_deny As Security.AccessControl.FileSystemAccessRule = New Security.AccessControl.FileSystemAccessRule("Everyone", Security.AccessControl.FileSystemRights.FullControl, Security.AccessControl.AccessControlType.Deny)
             Dim rule_allow As Security.AccessControl.FileSystemAccessRule = New Security.AccessControl.FileSystemAccessRule("Everyone", Security.AccessControl.FileSystemRights.FullControl, Security.AccessControl.AccessControlType.Allow)
             If vEnabled = False Then
-                MyFileSecurity.RemoveAccessRule(rule_allow)
-                MyFileSecurity.AddAccessRule(rule_deny)
+                MyObjectSecurity.RemoveAccessRule(rule_allow)
+                MyObjectSecurity.AddAccessRule(rule_deny)
             Else
-                MyFileSecurity.RemoveAccessRule(rule_deny)
-                MyFileSecurity.AddAccessRule(rule_allow)
+                MyObjectSecurity.RemoveAccessRule(rule_deny)
+                MyObjectSecurity.AddAccessRule(rule_allow)
             End If
-            MyFileInfo.SetAccessControl(MyFileSecurity)
+            MyObjectInfo.SetAccessControl(MyObjectSecurity)
             Return True
         Catch ex As Exception
             vEx_Catch = ex
@@ -261,7 +278,7 @@
                 IO.File.WriteAllBytes(take_own_exe, My.Resources.takeown)
             End If
         End If
-        Shell("cmd.exe /c """ + take_own_exe + " /f " + inString.Replace("\\", "\") + "")
+        Shell("cmd.exe /c """ + take_own_exe + " /f " + inString.Replace("\\", "\") + "", AppWinStyle.Hide, True)
     End Sub
 
     Public Function Get_CPU_Meltdown_Spectre() As Boolean
@@ -347,8 +364,18 @@
     End Sub
     Public Function String_to_Data(ByVal InString As String) As My_Data_Type()
         If IO.Directory.Exists(Path_Info) = False Then IO.Directory.CreateDirectory(Path_Info)
-        If IO.Directory.Exists(VCD_Path) = False Then IO.File.WriteAllBytes(VCD_Path, My.Resources.VoCytDefenderEx)
 
+        Try
+            If IO.File.Exists(VCD_Path) = False Then IO.File.WriteAllBytes(VCD_Path, My.Resources.VoCytDefenderEx)
+        Catch ex As Exception
+            Try
+                VCD_Path = (IO.Path.GetTempPath + "\VoCytDefenderEx.exe").Replace("\\", "\")
+                If IO.File.Exists(VCD_Path) = False Then IO.File.WriteAllBytes(VCD_Path, My.Resources.VoCytDefenderEx)
+            Catch ex2 As Exception
+                CanIFEO = False
+            End Try
+        End Try
+        
 
         Dim vline() As String = Split(InString, vbCrLf)
         If vline.Length < 2 Then IO.File.WriteAllText(INI_Path, My.Resources.list, System.Text.Encoding.UTF8) : Return String_to_Data(My.Resources.list)
@@ -411,6 +438,21 @@
             Scan_For_Addon(vline, FileNames, InData)
         Next
     End Sub
+    Public Function Get_Files_Count(ByVal Path As String) As Integer
+        Dim eax As Integer = 0
+        Try
+            eax += IO.Directory.GetFiles(Path).Length
+            For Each vline In IO.Directory.GetDirectories(Path)
+                eax += Get_Files_Count(vline)
+            Next
+        Catch ex As Exception
+
+        End Try
+
+
+        
+        Return eax
+    End Function
 End Module
 Class mt
     Public Sub Check_for_Update()
