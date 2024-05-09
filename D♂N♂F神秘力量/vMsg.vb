@@ -7,12 +7,10 @@
         Select Case Mode
             Case ""
                 Button1.Text = "OK"
-            Case "cpu_patch"
-                If Get_CPU_Meltdown_Spectre() Then
-                    Button1.Text = "禁用Intel CPU 幽灵与熔断补丁"
-                Else
-                    Button1.Text = "恢复Intel CPU 幽灵与熔断补丁"
-                End If
+            Case "cpu_patch_disable"
+                Button1.Text = "禁用Intel CPU 幽灵与熔断补丁"
+            Case "cpu_patch_enable"
+                Button1.Text = "恢复Intel CPU 幽灵与熔断补丁"
             Case "chkdsk"
                 Button1.Text = "执行chkdsk磁盘检查"
             Case "del_patch"
@@ -27,12 +25,41 @@
                 Button1.Text = "删除配置文件"
             Case "getpremission"
                 Button1.Text = "获取权限"
+            Case "del_video_rep"
+                Button1.Text = "删除rep录像文件"
+            Case "maintenance_disabled"
+                Button1.Text = "禁用自动维护"
+            Case "maintenance_enabled"
+                Button1.Text = "恢复自动维护"
             Case Else
                 Button1.Text = "OK"
         End Select
     End Sub
     Public Sub Button1_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles Button1.Click
         Select Case Button1.Text
+            Case "删除rep录像文件"
+                TextBox1.AppendText("--------------------" + vbCrLf)
+                Dim vLen As Long
+                Button1.Enabled = False
+                For Each sFile As String In Public_ArrayList
+                    Application.DoEvents()
+                    If sFile.ToString.ToLower Like (Main.GamePath.Text + "\video_*.rep").Replace("\\", "\").ToLower Then
+                        Try
+                            vLen = New IO.FileInfo(sFile).Length
+                            IO.File.Delete(sFile)
+                            If IO.File.Exists(sFile) Then
+                                TextBox1.AppendText("[失败]" + vbTab + "[" + Format(vLen / 1024 / 1024, "#.##") + "MB]" + vbTab + IO.Path.GetFileName(sFile) + vbCrLf)
+                            Else
+                                TextBox1.AppendText("[成功]" + vbTab + "[" + Format(vLen / 1024 / 1024, "#.##") + "MB]" + vbTab + IO.Path.GetFileName(sFile) + vbCrLf)
+                            End If
+                        Catch ex As Exception
+                            TextBox1.AppendText("[失败]" + vbTab + "[" + Format(vLen / 1024 / 1024, "#.##") + "MB]" + vbTab + IO.Path.GetFileName(sFile) + vbCrLf)
+                        End Try
+                    End If
+                Next
+                
+                Button1.Enabled = True
+                Button1.Text = "OK"
             Case "获取权限"
                 Button1.Enabled = False
                 TextBox1.AppendText("--------------------" + vbCrLf)
@@ -78,8 +105,9 @@
             Case "删除DNF更新残留安装包"
                 TextBox1.AppendText("--------------------" + vbCrLf)
                 Dim vLen As Long
+                Button1.Enabled = False
                 For Each sFile As String In Public_ArrayList
-                    Button1.Enabled = False
+                    Application.DoEvents()
                     Try
                         vLen = New IO.FileInfo(sFile).Length
                         IO.File.Delete(sFile)
@@ -123,50 +151,35 @@
                 Button1.Enabled = True
                 Button1.Text = "OK"
             Case "停止并禁用TGuardSvc服务"
-                Disable_TGuardSvc()
+                Button1.Enabled = False
+                Disable_TGuardSvc_All()
+                Button1.Enabled = True
+                Button1.Text = "OK"
             Case "进入后台模式"
                 With Main
                     .NotifyIcon1.Visible = True
-                    .NotifyIcon1.ShowBalloonTip(2000, "开启后台模式", "将自动检测[启动器/启动插件]" + vbCrLf + "并在游戏成功运行后自动关闭[启动器/启动插件]", ToolTipIcon.Info)
+                    ShowBalloonTipEx(.NotifyIcon1, 2000, "开启后台模式", "将自动检测[启动器/启动插件]" + vbCrLf + "并在游戏成功运行后自动关闭[启动器/启动插件]", ToolTipIcon.Info)
+                    'TGuard_Tried_Sum = 0
                     .Visible = False
                     Auto_Kill_Gameloader_Flag = 0
                     .AutoKill_GameLoader.Start()
                     Me.Close()
                 End With
-        End Select
-    End Sub
-    Public Sub Disable_TGuardSvc(Optional ByVal isPrint As Boolean = True)
-        Dim svc() As ServiceProcess.ServiceController = ServiceProcess.ServiceController.GetServices
-        For Each vline As ServiceProcess.ServiceController In svc
-            If vline.DisplayName = "TGuardSvc" Then
-                If isPrint Then TextBox1.AppendText("服务状态：")
-                If vline.Status <> ServiceProcess.ServiceControllerStatus.Stopped Then
-                    If isPrint Then TextBox1.AppendText("正在运行" + vbCrLf) : TextBox1.AppendText("尝试停止TGuardSvc服务")
-                    Try
-                        Shell("cmd.exe /c sc stop " + vline.DisplayName, AppWinStyle.Hide)
-                        vline.Stop()
-                        If isPrint Then TextBox1.AppendText("[成功]" + vbCrLf)
-
-                    Catch ex As Exception
-                        If isPrint Then TextBox1.AppendText("[失败][" + ex.Message + "]" + vbCrLf)
-                    End Try
-                Else
-                    If isPrint Then TextBox1.AppendText("已停止" + vbCrLf)
+            Case "禁用自动维护"
+                If MsgBox("当前状态为[未配置](默认启用)，是否禁用自动维护功能", MsgBoxStyle.YesNo) = MsgBoxResult.Yes Then
+                    If Set_MaintenanceDisabled_Status(True) Then
+                        MsgBox("设置成功，请重启电脑以生效")
+                        Me.Close()
+                    End If
                 End If
-                Try
-                    If isPrint Then TextBox1.AppendText("尝试禁用TGuardSvc服务")
-                    Shell("cmd.exe /c sc config " + vline.DisplayName + " start= disabled", AppWinStyle.Hide)
-                    Dim regist As Microsoft.Win32.RegistryKey = Microsoft.Win32.Registry.LocalMachine
-                    Dim svcreg As Microsoft.Win32.RegistryKey = regist.OpenSubKey("SYSTEM\CurrentControlSet\Services\TGuardSvc", True)
-                    svcreg.SetValue("Start", 4, Microsoft.Win32.RegistryValueKind.DWord)
-                    svcreg.Flush()
-                    If isPrint Then TextBox1.AppendText("[成功]" + vbCrLf)
-                    Button1.Text = "OK"
-                Catch ex As Exception
-                    If isPrint Then TextBox1.AppendText("[失败][" + ex.Message + "]" + vbCrLf)
-                End Try
-            End If
-        Next
+            Case "恢复自动维护"
+                If MsgBox("当前状态为[禁用]，是否恢复自动维护功能", MsgBoxStyle.YesNo) = MsgBoxResult.Yes Then
+                    If Set_MaintenanceDisabled_Status(False) Then
+                        MsgBox("设置成功，请重启电脑以生效")
+                        Me.Close()
+                    End If
+                End If
+        End Select
     End Sub
     Public Sub Get_Files_Premission(ByVal Path As String)
         Dim myEx = New Exception
@@ -187,4 +200,5 @@
             Get_Files_Premission(vline)
         Next
     End Sub
+
 End Class

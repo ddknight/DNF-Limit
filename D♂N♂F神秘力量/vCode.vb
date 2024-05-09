@@ -1,14 +1,21 @@
 ﻿Module vCode
+#If DEBUG Then
+    Public DEBUG_MODE = True
+#Else
+    Public DEBUG_MODE = False
+#End If
     Public vData() As My_Data_Type
     Public CanIFEO As Boolean
     Public Data_Version As Double = 2.4
-    Public Update_URL As String = "http://vocyt-dnf-limit.oss-cn-qingdao.aliyuncs.com/application-update"
-    Public Update_Page As String = "http://bbs.colg.cn/thread-7393386-1-1.html"
+    Public Update_Server = "update.vocyt.com"
+    Public TGuardSvc_Path As String = "C:\Program Files (x86)\Tencent\TGuard\"
+    Public Startup_Path As String = Environment.GetFolderPath(Environment.SpecialFolder.Startup)
     'Public VoCytDefenderEx_Path As String
     Public Public_ArrayList As ArrayList
     'Public vCurrend_File As String
     Public Hide_Run As Boolean = False
     Public Auto_Kill_Gameloader_Flag As Integer
+    Public Public_Date As Date
     Public Process_dnf As Process
     Public Path_Info As String = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "\" + Application.ProductName
     Public INI_Path = Path_Info + ("\list.ini").Replace("\\", "\")
@@ -28,6 +35,14 @@
                                             "res.vfs", _
                                             "DNFTips.dll"}
 
+
+    Public Sub Set_Application_Title()
+        Main.Text = "D♂N♂F神秘力量"
+        If DEBUG_MODE Then Main.Text += "[调试版本]"
+        Main.Text += " Ver " + Get_Application_Version()
+        If CanIFEO Then Main.Text += "[IFEO]" Else Main.Text += "[文件读写]"
+        Main.Text += "  Powered by VoCyt" '    for 0.0.2.
+    End Sub
     Public Structure My_Data_Type
         Dim Name As String
         Dim Value As Integer
@@ -89,14 +104,8 @@
         End Try
         Return ""
     End Function
-
-    Public Sub Set_Application_Title()
-        Main.Text = "D♂N♂F神秘力量 Ver " + Get_Application_Version() + " "
-        If CanIFEO Then Main.Text += "[IFEO]" Else Main.Text += "[文件读写]"
-        Main.Text += " Powered by VoCyt" '   Alpha Test for 0.0.2.7
-    End Sub
     Public Sub Kill_Process()
-        Dim s As String = "下列正在运行的程序可能会影响本软件运行，是否关闭？" + vbCrLf + "----------" + vbCrLf
+        Dim s As String = "下列正在运行的程序可能会影响本软件运行，是否关闭？（不关闭亦可运行）" + vbCrLf + vbCrLf + "----------" + vbCrLf
         Dim vDNF_List() As String = {"CrossProxy", "TPHelper", "TQMCenter", "tgp_gamead", "GameLoader", "DNF"}
         Dim vProcess() As Process = Process.GetProcesses
         Dim vMessage As String = s
@@ -121,6 +130,19 @@
                     Next
                 Next
             End If
+        End If
+        If IO.File.Exists(vLimit.sys_path) Then
+            s = "vLimit-d驱动拦截有更新，请进入驱动拦截页面删除驱动并重新加载拦截"
+            Try
+                Dim ns = IO.File.ReadAllBytes(vLimit.sys_path)
+                Dim ls = My.Resources.vLimit_d
+                If ns.Length <> ls.Length Then MsgBox(s)
+                For i = 0 To ns.Length
+                    If ns(i) <> ls(i) Then MsgBox(s) : Exit For
+                Next
+            Catch ex As Exception
+
+            End Try
         End If
     End Sub
     Friend Function Get_Application_Version() As String
@@ -199,41 +221,34 @@
     End Sub
     Public Function Set_File_Security(ByVal vfilefullpath As String, ByVal vEnabled As Boolean, ByRef vEx_Catch As Exception) As Boolean
         Try
-            Dim MyObjectSecurity
-            Dim MyObjectInfo
-            'Dim rule_deny
-            'Dim rule_allow
+            Dim vFileInfo
+            Dim vFileACL
             If IO.File.Exists(vfilefullpath) Then
-                MyObjectInfo = New IO.FileInfo(vfilefullpath.Replace("\\", "\"))
-                'rule_deny = New Security.AccessControl.FileSystemAccessRule("Everyone", Security.AccessControl.FileSystemRights.FullControl, Security.AccessControl.AccessControlType.Deny)
-                'rule_allow = New Security.AccessControl.FileSystemAccessRule("Everyone", Security.AccessControl.FileSystemRights.FullControl, Security.AccessControl.AccessControlType.Allow)
+                vFileInfo = New IO.FileInfo(vfilefullpath.Replace("\\", "\"))
             ElseIf IO.Directory.Exists(vfilefullpath) Then
-                MyObjectInfo = New IO.DirectoryInfo(vfilefullpath.Replace("\\", "\"))
-                'rule_deny = New Security.AccessControl.FileSystemAccessRule("Everyone", Security.AccessControl.FileSystemRights.FullControl, Security.AccessControl.AccessControlType.Deny)
-                'rule_allow = New Security.AccessControl.FileSystemAccessRule("Everyone", Security.AccessControl.FileSystemRights.FullControl, Security.AccessControl.AccessControlType.Allow)
+                vFileInfo = New IO.DirectoryInfo(vfilefullpath.Replace("\\", "\"))
             Else
                 Throw New Exception("File not found.")
             End If
-            'Dim vfilepath As String = vfilefullpath.Replace("\\", "\")
-            'Dim MyFileInfo As IO.FileInfo = New IO.FileInfo(vfilepath)
-            'Dim MyObjectSecurity As Security.AccessControl.FileSecurity
+
             Try
-                MyObjectSecurity = MyObjectInfo.GetAccessControl
+                vFileACL = vFileInfo.GetAccessControl
             Catch ex2 As Exception
                 Take_Owner(vfilefullpath)
-                MyObjectSecurity = MyObjectInfo.GetAccessControl
+                vFileACL = vFileInfo.GetAccessControl
             End Try
-
-            Dim rule_deny As Security.AccessControl.FileSystemAccessRule = New Security.AccessControl.FileSystemAccessRule("Everyone", Security.AccessControl.FileSystemRights.FullControl, Security.AccessControl.AccessControlType.Deny)
-            Dim rule_allow As Security.AccessControl.FileSystemAccessRule = New Security.AccessControl.FileSystemAccessRule("Everyone", Security.AccessControl.FileSystemRights.FullControl, Security.AccessControl.AccessControlType.Allow)
+            Dim rules As System.Security.AccessControl.AuthorizationRuleCollection
+            rules = vFileACL.GetAccessRules(True, True, GetType(System.Security.Principal.NTAccount))
+            For Each vline As System.Security.AccessControl.FileSystemAccessRule In rules
+                vFileACL.RemoveAccessRule(vline)
+            Next
+            vFileACL.SetAccessRuleProtection(True, False)
             If vEnabled = False Then
-                MyObjectSecurity.RemoveAccessRule(rule_allow)
-                MyObjectSecurity.AddAccessRule(rule_deny)
+                vFileACL.SetAccessRule(New Security.AccessControl.FileSystemAccessRule("Everyone", Security.AccessControl.FileSystemRights.FullControl, Security.AccessControl.AccessControlType.Deny))
             Else
-                MyObjectSecurity.RemoveAccessRule(rule_deny)
-                MyObjectSecurity.AddAccessRule(rule_allow)
+                vFileACL.SetAccessRule(New Security.AccessControl.FileSystemAccessRule("Everyone", Security.AccessControl.FileSystemRights.FullControl, Security.AccessControl.AccessControlType.Allow))
             End If
-            MyObjectInfo.SetAccessControl(MyObjectSecurity)
+            vFileInfo.SetAccessControl(vFileACL)
             Return True
         Catch ex As Exception
             vEx_Catch = ex
@@ -280,7 +295,6 @@
         End If
         Shell("cmd.exe /c """ + take_own_exe + " /f " + inString.Replace("\\", "\") + "", AppWinStyle.Hide, True)
     End Sub
-
     Public Function Get_CPU_Meltdown_Spectre() As Boolean
         Dim MyReg As Microsoft.Win32.RegistryKey
         MyReg = Microsoft.Win32.Registry.LocalMachine.OpenSubKey("SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management")
@@ -326,11 +340,13 @@
             MyReg.SetValue("FeatureSettingsOverrideMask", 3, Microsoft.Win32.RegistryValueKind.DWord)
         End If
     End Sub
-    Public Sub Scan_Files(ByVal vPath As String, ByRef vFile As ArrayList)
+    Public Sub Scan_Files(ByVal vPath As String, ByRef vFile As ArrayList, Optional ByVal Scan_Child As Boolean = True)
         Try
-            For Each sPath As String In IO.Directory.GetDirectories(vPath)
-                Scan_Files(sPath, vFile)
-            Next
+            If Scan_Child Then
+                For Each sPath As String In IO.Directory.GetDirectories(vPath)
+                    Scan_Files(sPath, vFile)
+                Next
+            End If
             For Each sFile As String In IO.Directory.GetFiles(vPath)
                 vFile.Add(sFile)
             Next
@@ -375,7 +391,7 @@
                 CanIFEO = False
             End Try
         End Try
-        
+
 
         Dim vline() As String = Split(InString, vbCrLf)
         If vline.Length < 2 Then IO.File.WriteAllText(INI_Path, My.Resources.list, System.Text.Encoding.UTF8) : Return String_to_Data(My.Resources.list)
@@ -397,7 +413,6 @@
         Return vRet
 
     End Function
-
     Public Sub Scan_For_Addon(ByVal path As String, ByVal FileNames As ArrayList, ByRef InData As ArrayList)
         Dim sg As My_Data_Type
         For Each vline In IO.Directory.GetFiles(path)
@@ -430,8 +445,8 @@
                         End If
 
                 End Select
-            
-            InData.Add(sg)
+
+                InData.Add(sg)
             End If
         Next
         For Each vline In IO.Directory.GetDirectories(path)
@@ -450,30 +465,85 @@
         End Try
 
 
-        
+
         Return eax
     End Function
+    Public Sub ShowBalloonTipEx(ByVal myNotifyIcon As Windows.Forms.NotifyIcon, ByVal timeout As Integer, ByVal tipTitle As String, ByVal tipText As String, ByVal tipIcon As Windows.Forms.ToolTipIcon)
+        If Main.气泡提示ToolStripMenuItem.Checked Then myNotifyIcon.ShowBalloonTip(timeout, tipTitle, tipText, tipIcon)
+    End Sub
+    Public Function Get_MaintenanceDisabled_Status()
+        Try
+            Dim MyReg As Microsoft.Win32.RegistryKey
+            MyReg = Microsoft.Win32.Registry.LocalMachine.OpenSubKey("SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\Maintenance")
+            Dim value = MyReg.GetValue("MaintenanceDisabled")
+            If value = 1 Then Return True Else Return False
+        Catch ex As Exception
+            Return False
+        End Try
+    End Function
+    Public Function Set_MaintenanceDisabled_Status(ByVal vBoolean As Boolean) As Boolean
+        Try
+            Dim MyReg As Microsoft.Win32.RegistryKey
+            MyReg = Microsoft.Win32.Registry.LocalMachine.CreateSubKey("SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\Maintenance")
+            If vBoolean Then
+                MyReg.SetValue("MaintenanceDisabled", 1, Microsoft.Win32.RegistryValueKind.DWord)
+            Else
+                MyReg.DeleteValue("MaintenanceDisabled", False)
+            End If
+            Return True
+        Catch ex As Exception
+            MsgBox(ex.Message)
+            Return False
+        End Try
+    End Function
+
 End Module
-Class mt
+Public Class mt
+    Public isMessage As Boolean = False
+    Public updURL As String
     Public Sub Check_for_Update()
         Dim nowversion As Integer = vCode.Get_Application_Version().Replace(".", "")
-        Dim tmp As String = IO.Path.GetTempFileName
+        Dim str As String
+        Dim strex() As String = {}
         Dim latestversion As Integer = 0
         Try
-            My.Computer.Network.DownloadFile(Update_URL, tmp, "", "", False, 500, True)
-            tmp = IO.File.ReadAllText(tmp)
-            If IsNumeric(tmp.Replace(".", "")) Then latestversion = CInt(tmp.Replace(".", ""))
+            'My.Computer.Network.DownloadFile(Update_URL, tpf, "", "", False, 5000, True)
+            Dim myEndPoint = New System.Net.IPEndPoint(System.Net.Dns.GetHostAddresses(Update_Server)(0), 47655)
+            Dim mySocket = New System.Net.Sockets.Socket(System.Net.Sockets.AddressFamily.InterNetwork, System.Net.Sockets.SocketType.Stream, System.Net.Sockets.ProtocolType.Tcp)
+            mySocket.Connect(myEndPoint)
+            mySocket.Send(System.Text.Encoding.Unicode.GetBytes("UPDATE"))
+            mySocket.ReceiveTimeout = 5000
+            Dim bytes(121) As Byte
+            Dim index As Integer = 0
+            index = mySocket.Receive(bytes, index, bytes.Length - index, Net.Sockets.SocketFlags.None)
+            While index < bytes.Length
+                index += mySocket.Receive(bytes, index, bytes.Length - index, Net.Sockets.SocketFlags.None)
+            End While
+            For i = 0 To 19
+                bytes(i) = bytes(i + 102)
+            Next
+            ReDim Preserve bytes(19)
+            ReDim bytes(CInt(System.Text.Encoding.Unicode.GetString(bytes)) - 1)
+            index = 0
+            While index < bytes.Length
+                index += mySocket.Receive(bytes, index, bytes.Length - index, Net.Sockets.SocketFlags.None)
+            End While
+            str = System.Text.Encoding.Unicode.GetString(bytes)
+            strex = str.Split(",")
+            If strex.Length = 2 Then
+                latestversion = CInt(strex(0).Replace(".", ""))
+                updURL = strex(1)
+                If latestversion > nowversion And isMessage And updURL <> "" Then
+                    If MsgBox("已有新版本更新，是否跳转至程序发布/更新网页？", MsgBoxStyle.YesNo) = MsgBoxResult.Yes Then
+                        Diagnostics.Process.Start(updURL)
+                    End If
+
+                End If
+            End If
+
+
         Catch ex As Exception
 
         End Try
-        If latestversion > nowversion Then
-            If MsgBox("已有新版本更新，是否跳转至程序发布/更新网页？", MsgBoxStyle.YesNo) = MsgBoxResult.Yes Then
-                Diagnostics.Process.Start(Update_Page)
-            End If
-        End If
-
-
-
-
     End Sub
 End Class

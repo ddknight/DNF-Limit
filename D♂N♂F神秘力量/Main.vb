@@ -25,29 +25,37 @@
         Else
             vData = String_to_Data("")
         End If
-
+        禁用更新ToolStripMenuItem.Checked = Not IO.File.Exists(Path_Info + "\noUpdate")
+        气泡提示ToolStripMenuItem.Checked = Not IO.File.Exists(Path_Info + "\noBalloonTip")
+        自动删除rep文件ToolStripMenuItem.Checked = Not IO.File.Exists(Path_Info + "\noDelrepFile")
+        开机启动ToolStripMenuItem.Checked = IO.File.Exists(Startup_Path + "\" + Application.ProductName + ".bat")
 
         'If CanIFEO = False Then MsgBox("权限不足，将采用[文件读写]模式" + vbCrLf + "[更新游戏]需要[恢复]！！！" + vbCrLf + "详情参阅帮助")
         Set_Application_Title()
 
         Dim Args_Background = False
-        Dim Args_Update = True
+        Dim Args_Update = Not 禁用更新ToolStripMenuItem.Checked
         For Each vline In My.Application.CommandLineArgs
             Select Case vline.ToLower
                 Case "-b", "-bg", "-background"
                     Args_Background = True
                 Case "-nu", "-noupgrade"
                     Args_Update = False
+                Case Else
+                    If vline.ToLower.StartsWith("-path=") Then
+                        GamePath.Text = Mid(vline, 7)
+                    End If
             End Select
         Next
-        If Args_Update Then
+        If Args_Update And Not DEBUG_MODE Then
             Dim nc As New mt
+            nc.isMessage = True
             Dim nt As New Threading.Thread(AddressOf nc.Check_for_Update)
             nt.Start()
         End If
         If Args_Background Then
             NotifyIcon1.Visible = True
-            NotifyIcon1.ShowBalloonTip(2000, "开启后台模式", "将自动检测[启动器/启动插件]" + vbCrLf + "并在游戏成功运行后自动关闭[启动器/启动插件]", ToolTipIcon.Info)
+            ShowBalloonTipEx(NotifyIcon1, 2000, "开启后台模式", "将自动检测[启动器/启动插件]" + vbCrLf + "并在游戏成功运行后自动关闭[启动器/启动插件]", ToolTipIcon.Info)
             Me.Visible = False
             'Me.Hide()
             Hide_Run = True
@@ -116,8 +124,7 @@
         vList.Check_Status(False)
         PAppend("执行结束")
         If Bad = True Then PAppend("部分插件采用[文件读写]模式禁用，更新游戏建议还原插件，详情参阅[帮助]")
-        vMSG.Button1.Text = "停止并禁用TGuardSvc服务"
-        vMSG.Button1_Click(Me, e)
+        Disable_TGuardSvc_All(False)
     End Sub
 
     Private Sub Button3_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles Button3.Click
@@ -173,10 +180,22 @@
     End Sub
 
     Private Sub Button6_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles Button6.Click
-        vMSG.Mode = ""
-        vMSG.TextBox1.Text = My.Resources.help
-        vMSG.TextBox1.Select(0, 0)
-        vMSG.Show()
+
+        Try
+            Dim tpf = IO.Path.GetTempPath
+            tpf += Application.ProductName + "帮助文档.txt"
+            IO.File.Delete(tpf)
+            IO.File.WriteAllText(tpf, My.Resources.help)
+            Diagnostics.Process.Start(tpf)
+
+        Catch ex As Exception
+            vMSG.Mode = ""
+            vMSG.TextBox1.Text = My.Resources.help
+            vMSG.TextBox1.Select(0, 0)
+            vMSG.Show()
+        End Try
+
+
     End Sub
 
     Private Sub Button7_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles Button7.Click
@@ -191,11 +210,13 @@
             .AppendText("补丁状态:" + vbCrLf)
             If Get_CPU_Meltdown_Spectre() = True Then
                 .AppendText("未配置(默认)")
+                vMSG.Mode = "cpu_patch_disable"
             Else
                 .AppendText("禁用")
+                vMSG.Mode = "cpu_patch_enable"
             End If
         End With
-        vMSG.Mode = "cpu_patch"
+
         vMSG.Show()
     End Sub
 
@@ -248,7 +269,7 @@
             .AppendText("TP_Temp：TP临时文件夹" + vbCrLf)
 
             Try
-                
+                Public_ArrayList = New ArrayList
                 If Public_ArrayList.Count = 0 Then
                     .AppendText("无" + vbCrLf)
                 Else
@@ -265,38 +286,6 @@
         vMSG.Mode = "del_3rd"
         vMSG.Show()
     End Sub
-
-    Private Sub Button11_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles Button11.Click
-        With vMSG.TextBox1
-            .Clear()
-            .AppendText("Win10用户频繁蓝屏，且蓝屏代码基本为下列两种：" + vbCrLf)
-            .AppendText("IRQL_NOT_LESS_OR_EQUAL" + vbCrLf)
-            .AppendText("DRIVER_IRQL_NOT_LESS_OR_EQUAL" + vbCrLf)
-            .AppendText("多为windows内核ntoskrnl.exe引发的蓝屏，ntoskrnl.exe为NT架构核心调度文件" + vbCrLf)
-            .AppendText("该蓝屏多为TP组件跟Win10内核冲突所致，无需怀疑你的系统，也无需怀疑TX的TP，总而言之是个玄学问题" + vbCrLf)
-            .AppendText("目前没有任何一个方法或者手段完全不让这个冲突导致蓝屏(至少这半年我没发现)" + vbCrLf)
-            .AppendText("包括更换VSDDrvDll.dll等方法，均有概率诱发蓝屏，表现为TP蓝框读条结束蓝屏，进游戏蓝屏，反复蓝屏" + vbCrLf)
-            .AppendText("--------------------" + vbCrLf)
-            .AppendText("解决方案：" + vbCrLf)
-            .AppendText("更新Win10 1809正式版" + vbCrLf)
-            .AppendText("更新Win10 1809正式版后，根据基友反馈，蓝屏概率大幅降低，应该与Win10内核审核权限有关" + vbCrLf)
-            .AppendText("偶尔蓝屏，重启计算机再登陆即恢复正常，而1803及之前的版本表现为反复蓝屏" + vbCrLf)
-            .AppendText("如果您不愿意更新，那么抱歉，游戏跟Win10选一个，或者与蓝为伴" + vbCrLf)
-            .AppendText("如果您收到了Win10 1809的推送，请尽快更新" + vbCrLf)
-            .AppendText("如果您未收到了Win10 1809的推送，可以按照如下方法开启预览更新" + vbCrLf)
-            .AppendText("--------------------" + vbCrLf)
-            .AppendText("Win10 1809预览更新：" + vbCrLf)
-            .AppendText("设置-更新和安全-Windows 预览体验计划" + vbCrLf)
-            .AppendText("获取Insider Preview内部版本-开始-选择账户-链接账户-登陆Microsoft账户" + vbCrLf)
-            .AppendText("希望接受哪类内容-跳到下一个Windows版本" + vbCrLf)
-            .AppendText("等待更新或手动更新" + vbCrLf)
-            .AppendText("--------------------" + vbCrLf)
-            .AppendText("注意，各个版本Win10打开预览更新的流程可能不相同，且我的Microsoft账户是开发者账户，所以流程上可能有细微差别")
-        End With
-        vMSG.Mode = ""
-        vMSG.Show()
-    End Sub
-
 
 
     Private Sub Button12_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles Button12.Click
@@ -316,19 +305,35 @@
             .AppendText("下载器：TenioDL.exe" + vbCrLf)
             .AppendText("启动器：GameLoader.exe" + vbCrLf)
             .AppendText("后台服务：TesService.exe" + vbCrLf)
-            .AppendText("注册服务：TGuard.exe" + vbCrLf)
+            .AppendText("注册服务：TGuardSvc.exe、TGuard.exe" + vbCrLf)
             .AppendText("--------------------" + vbCrLf)
             .AppendText("如需运行软件自动进入后台模式，可在运行本程序时，添加 -b参数，如：" + vbCrLf)
             .AppendText("D♂N♂F神秘力量.exe -b" + vbCrLf)
+            .AppendText("--------------------" + vbCrLf)
+            .AppendText("如需开机自启动后台模式，请在开启后台模式后，右键左下角图标进行设置" + vbCrLf)
+            .AppendText("启动文件目录位于：" + Startup_Path)
         End With
         vMSG.Mode = "background"
         vMSG.Show()
     End Sub
 
-    Private Sub Timer1_Tick(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles AutoKill_GameLoader.Tick
+    Private Sub AutoKill_GameLoader_Tick(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles AutoKill_GameLoader.Tick
 
         Try
+            '删除rep
             If Process_dnf IsNot Nothing Then
+                If 自动删除rep文件ToolStripMenuItem.Checked = True Then
+                    Dim repfiles = IO.Directory.GetFiles(GamePath.Text)
+                    For Each vline In repfiles
+                        If IO.Path.GetFileName(vline).ToLower Like "video_*.rep" Then
+                            Try
+                                IO.File.Delete(vline)
+                            Catch ex As Exception
+
+                            End Try
+                        End If
+                    Next
+                End If
                 If Process_dnf.HasExited = False Then Exit Sub
             End If
         Catch ex As Exception
@@ -337,37 +342,68 @@
         Try
             Select Case Auto_Kill_Gameloader_Flag
                 Case 0
-                    For Each vline As Process In vProcess
-                        Select Case vline.ProcessName.ToLower
-                            Case "teniodl", "gameloader" ', "tesservice"
-                                NotifyIcon1.ShowBalloonTip(2000, "提示", "检测到" + vline.ProcessName + "启动", ToolTipIcon.Info)
-                                Auto_Kill_Gameloader_Flag = 1
-                                AutoKill_GameLoader.Interval = 1000
-                        End Select
-                    Next
-                Case 1
-                    For Each vline As Process In vProcess
-                        Select Case vline.ProcessName.ToLower
-                            Case "dnf"
-                                NotifyIcon1.ShowBalloonTip(2000, "提示", "检测到" + vline.ProcessName + "启动" + vbCrLf + "等待游戏载入", ToolTipIcon.Info)
-                                Auto_Kill_Gameloader_Flag = 2
-                        End Select
-                    Next
-                Case 2
-                    For Each vline As Process In vProcess
-                        Select Case vline.ProcessName.ToLower
-                            Case "dnf"
-                                'vline.Start()
-                                If vline.MainWindowTitle = "地下城与勇士" And DateDiff("s", vline.StartTime, Now) > 60 Then
-                                    NotifyIcon1.ShowBalloonTip(2000, "提示", vline.ProcessName + "启动成功" + vbCrLf + "将于10秒后结束残余启动器", ToolTipIcon.Info)
-                                    AutoKill_GameLoader.Stop()
-                                    AutoKill_Kill.Start()
-                                    AutoKill_GameLoader.Interval = 5000
-                                    Auto_Kill_Gameloader_Flag = 0
-                                    Process_dnf = vline
+                    If 自动删除rep文件ToolStripMenuItem.Checked = True Then
+                        Try
+                            Dim repfiles = IO.Directory.GetFiles(GamePath.Text)
+                            For Each vline In repfiles
+                                If IO.Path.GetFileName(vline).ToLower Like "video_*.rep" Then
+                                    Try
+                                        IO.File.Delete(vline)
+                                    Catch ex2 As Exception
+
+                                    End Try
                                 End If
-                        End Select
-                    Next
+                            Next
+                        Catch ex As Exception
+
+                        End Try
+                    End If
+                        For Each vline As Process In vProcess
+                            Select Case vline.ProcessName.ToLower
+                                Case "teniodl", "gameloader" ', "tesservice"
+                                    ShowBalloonTipEx(NotifyIcon1, 2000, "提示", "检测到" + vline.ProcessName + "启动", ToolTipIcon.Info)
+                                    Auto_Kill_Gameloader_Flag = 1
+                                    AutoKill_GameLoader.Interval = 1000
+                                    Public_Date = Now
+                                Case "tguard", "tguardsvc"
+                                    If vline.MainModule.FileName.ToLower.Contains(TGuardSvc_Path.ToLower) Then
+                                        ShowBalloonTipEx(NotifyIcon1, 2000, "提示", "检测到TGuardSvc服务", ToolTipIcon.Info)
+                                        Disable_TGuardSvc_All(False)
+                                        ShowBalloonTipEx(NotifyIcon1, 2000, "提示", "禁用TGuardSvc服务", ToolTipIcon.Info)
+                                    End If
+                            End Select
+                        Next
+                Case 1
+                        If DateDiff(DateInterval.Second, Public_Date, Now) > 60 * 3 Then
+                            Auto_Kill_Gameloader_Flag = 0
+                            AutoKill_GameLoader.Stop()
+                            AutoKill_Kill.Start()
+                            AutoKill_GameLoader.Interval = 5000
+                            Auto_Kill_Gameloader_Flag = 0
+                            Exit Sub
+                        End If
+                        For Each vline As Process In vProcess
+                            Select Case vline.ProcessName.ToLower
+                                Case "dnf"
+                                    ShowBalloonTipEx(NotifyIcon1, 2000, "提示", "检测到" + vline.ProcessName + "启动" + vbCrLf + "等待游戏载入", ToolTipIcon.Info)
+                                    Auto_Kill_Gameloader_Flag = 2
+                            End Select
+                        Next
+                Case 2
+                        For Each vline As Process In vProcess
+                            Select Case vline.ProcessName.ToLower
+                                Case "dnf"
+                                    'vline.Start()
+                                    If vline.MainWindowTitle = "地下城与勇士" And DateDiff("s", vline.StartTime, Now) > 60 Then
+60:                                     ShowBalloonTipEx(NotifyIcon1, 2000, "提示", vline.ProcessName + "启动成功" + vbCrLf + "将于10秒后结束残余启动器", ToolTipIcon.Info)
+                                        AutoKill_GameLoader.Stop()
+                                        AutoKill_Kill.Start()
+                                        AutoKill_GameLoader.Interval = 5000
+                                        Auto_Kill_Gameloader_Flag = 0
+                                        Process_dnf = vline
+                                    End If
+                            End Select
+                        Next
             End Select
         Catch ex As Exception
             'NotifyIcon1.ShowBalloonTip(2000, "错误", ex.Message, ToolTipIcon.Error)
@@ -397,7 +433,6 @@
         End If
     End Sub
 
-   
     Private Sub AutoKill_Kill_Tick(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles AutoKill_Kill.Tick
         Dim vProcess() As Process = Process.GetProcesses
         Dim sProcess() As Process
@@ -414,7 +449,7 @@
                                 vline2.MainModule.FileName.ToString.ToLower.Contains("wegame") Then
                                     Try
                                         vline2.Kill()
-                                        NotifyIcon1.ShowBalloonTip(2000, "提示", "结束" + vline2.ProcessName + "成功", ToolTipIcon.Info)
+                                        ShowBalloonTipEx(NotifyIcon1, 2000, "提示", "结束" + vline2.ProcessName + "成功", ToolTipIcon.Info)
                                     Catch ex2 As Exception
                                         'NotifyIcon1.ShowBalloonTip(2000, "警告", "结束" + vline2.ProcessName + "失败" + vbCrLf + ex2.Message, ToolTipIcon.Warning)
                                     End Try
@@ -422,8 +457,8 @@
                             End If
                         Next
                     Case "tguardsvc", "tguard"
-                        vMSG.Disable_TGuardSvc()
-                        NotifyIcon1.ShowBalloonTip(2000, "提示", "禁用TGuardSvc服务", ToolTipIcon.Info)
+                        Disable_TGuardSvc_All(False)
+                        ShowBalloonTipEx(NotifyIcon1, 2000, "提示", "禁用TGuardSvc服务", ToolTipIcon.Info)
                 End Select
             Next
         Catch ex As Exception
@@ -447,7 +482,7 @@
     Private Sub Button14_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles Button14.Click
         Dim str As String = Find_DNF_Path()
         If str = "" Then
-            MsgBox("[注册表/默认安装路径/常规路径]均无DNF路径信息，无法检测DNF游戏路径" + +vbCrLf + vbCrLf + "请手动指定DNF游戏路径")
+            MsgBox("[注册表/默认安装路径/常规路径]均无DNF路径信息，无法检测DNF游戏路径" + vbCrLf + vbCrLf + "请手动指定DNF游戏路径")
         Else
             GamePath.Text = str
         End If
@@ -529,7 +564,17 @@
             .Clear()
             .AppendText("该功能将获取游戏目录中所有文件访问权，并设置[正常访问]" + vbCrLf)
             .AppendText("如需屏蔽插件，请待该操作结束后，再次禁用相关插件" + vbCrLf)
-            .AppendText("警告，该操作耗时较长（3~5分钟），请耐心等待" + vbCrLf)
+            .AppendText("操作结束后，将获取游戏目录内所有文件所有者，并删除所有限制权限，并添加Everyone为完全访问" + vbCrLf)
+            .AppendText("因目录权限限制，文件总数统计可能存在不准确性，该操作耗时较长（3~5分钟），请耐心等待" + vbCrLf)
+            .AppendText("--------------------" + vbCrLf)
+            .AppendText("Windows 10系统胡乱启用administrator管理员账号导致权限异常无法禁用文件的解决方法：" + vbCrLf)
+            .AppendText("1.右键游戏目录>属性>安全>高级" + vbCrLf)
+            .AppendText("2.点击禁用继承>从此对象中删除所有已继承的权限" + vbCrLf)
+            .AppendText("3.添加>选择主体>输入everyone>勾选完全控制" + vbCrLf)
+            .AppendText("4.回到高级选项卡>勾选使用可从此对象继承的权限项目替换所有子对象的权限项目>确定" + vbCrLf)
+            .AppendText("5.弹窗提示这将使来自XXX的可继承权限替换此对象所有子对象的明确定义权限, 你想继续吗 > 是" + vbCrLf)
+            .AppendText("6.确定" + vbCrLf)
+
             vMSG.Mode = "getpremission"
             vMSG.arg = (IO.Path.GetTempPath + "\takeown.exe").Replace("\\", "\")
         End With
@@ -569,6 +614,10 @@
         myButtonRight.Add(Button12)
         'Update
         myButtonRight.Add(Button11)
+        '卸载
+        myButtonRight.Add(Button19)
+        '蓝屏
+        myButtonRight.Add(Button18)
         Dim mySize = New Point((sender.Width - 20) / 2, 23)
         For Each vline In myButtonLeft
             vline.Size = mySize
@@ -579,4 +628,173 @@
         Next
     End Sub
 
+    Private Sub 气泡提示ToolStripMenuItem_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles 气泡提示ToolStripMenuItem.Click
+        If 气泡提示ToolStripMenuItem.Checked Then
+            IO.File.Create(Path_Info + "\NoBalloonTip").Close()
+        Else
+            IO.File.Delete(Path_Info + "\NoBalloonTip")
+        End If
+        气泡提示ToolStripMenuItem.Checked = Not 气泡提示ToolStripMenuItem.Checked
+    End Sub
+
+    Private Sub 开机启动ToolStripMenuItem_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles 开机启动ToolStripMenuItem.Click
+        Dim path = Startup_Path + "\" + Application.ProductName + ".bat"
+        If 开机启动ToolStripMenuItem.Checked Then
+            IO.File.Delete(path)
+        Else
+            Dim txt = "start /d """ + Application.StartupPath + """ " + IO.Path.GetFileName(Application.ExecutablePath) + " -b"
+            IO.File.WriteAllText(path, txt, System.Text.Encoding.Default)
+        End If
+        开机启动ToolStripMenuItem.Checked = Not 开机启动ToolStripMenuItem.Checked
+    End Sub
+
+    Private Sub Button11_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles Button11.Click
+        With vMSG.TextBox1
+            .Clear()
+            .AppendText("该功能将删除游戏主目录下所有rep录像文件：" + vbCrLf)
+            .AppendText("--------------------" + vbCrLf)
+            Try
+                Public_ArrayList = New ArrayList
+                Scan_Files(GamePath.Text, Public_ArrayList, False)
+                If Public_ArrayList.Count = 0 Then
+                    .AppendText("无" + vbCrLf)
+                Else
+
+                    For Each sFile In Public_ArrayList
+                        If sFile.ToString.ToLower Like (GamePath.Text + "\video_*.rep").Replace("\\", "\").ToLower Then
+                            .AppendText("[" + Format(New IO.FileInfo(sFile).Length / 1024 / 1024, "#.##") + "MB]" + vbTab + IO.Path.GetFileName(sFile) + vbCrLf)
+                        End If
+                    Next
+                End If
+
+
+            Catch ex As Exception
+
+            End Try
+        End With
+        vMSG.Mode = "del_video_rep"
+        vMSG.Show()
+    End Sub
+
+    Private Sub 自动删除rep文件ToolStripMenuItem_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles 自动删除rep文件ToolStripMenuItem.Click
+        If 自动删除rep文件ToolStripMenuItem.Checked Then
+            IO.File.Create(Path_Info + "\noDelrepFile").Close()
+        Else
+            IO.File.Delete(Path_Info + "\noDelrepFile")
+        End If
+        自动删除rep文件ToolStripMenuItem.Checked = Not 自动删除rep文件ToolStripMenuItem.Checked
+    End Sub
+
+    Private Sub Button18_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles Button18.Click
+        If MsgBox("此按钮是给某些勇士使用的，如果您不是天选之勇士，请取消", MsgBoxStyle.YesNo) = MsgBoxResult.Yes Then
+            If MsgBox("确定要触发蓝屏吗(请保存好所有正在编辑的文档)", MsgBoxStyle.YesNo) = MsgBoxResult.Yes Then
+                If MsgBox("真的要触发蓝屏吗（这句话不是开玩笑）", MsgBoxStyle.YesNo) = MsgBoxResult.Yes Then
+                    vMSG.Show()
+                    vBSOD()
+                End If
+            End If
+        End If
+    End Sub
+
+    Private Sub Button19_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles Button19.Click
+        If IO.File.Exists(GamePath.Text + "\地下城与勇士卸载.exe") Then
+            Shell((GamePath.Text + "\地下城与勇士卸载.exe").Replace("\\", "\"))
+        End If
+    End Sub
+
+    '-----------------------------
+    Private Sub Button23_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles Button23.Click
+        If Is64Bit() = False Then
+            MsgBox("仅64位系统可用")
+            Exit Sub
+        End If
+        vLimit.ShowDialog()
+    End Sub
+    Private Function Is64Bit() As Boolean
+        Dim addr = ""
+        Try
+            Dim vContOption = New System.Management.ConnectionOptions
+            Dim vMS = New System.Management.ManagementScope("\\localhost", vContOption)
+            Dim vQuery = New System.Management.ObjectQuery("select AddressWidth from Win32_Processor")
+            Dim vSearcher = New System.Management.ManagementObjectSearcher(vMS, vQuery)
+            Dim vObjectCollection = vSearcher.Get()
+            For Each vObject In vObjectCollection
+                addr = vObject("AddressWidth").ToString()
+            Next
+            If Int32.Parse(addr) = 64 Then
+                Return True
+            End If
+        Catch ex As Exception
+
+        End Try
+        Return False
+    End Function
+
+    Private Sub Button20_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles Button20.Click
+        With vMSG.TextBox1
+            .Clear()
+            .AppendText("功能简介：" + vbCrLf)
+            .AppendText("在一段时间不操作电脑后（挂机），Win10会触发自动维护，潜在诱发蓝屏" + vbCrLf)
+            .AppendText("关闭自动维护，会少许降低系统流畅度，但是可以缓解因为自动维护带来的蓝屏/卡死困扰" + vbCrLf + vbCrLf)
+            .AppendText("禁用自动维护服务的注册表地址[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\Maintenance]，键[MaintenanceDisabled]，值[DWORD:1]" + vbCrLf)
+            .AppendText("-------------------" + vbCrLf)
+            .AppendText("当前状态状态:" + vbCrLf)
+            If Get_MaintenanceDisabled_Status() = False Then
+                .AppendText("未配置(默认启用)")
+                vMSG.Mode = "maintenance_disabled"
+            Else
+                .AppendText("禁用")
+                vMSG.Mode = "maintenance_enabled"
+            End If
+        End With
+        vMSG.Show()
+    End Sub
+
+    Private Sub 更新链接ToolStripMenuItem_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles 更新链接ToolStripMenuItem.Click
+        Dim ms = New mt
+        ms.isMessage = False
+        ms.Check_for_Update()
+        If ms.updURL = "" Then
+            MsgBox("获取更新地址失败")
+        Else
+            Diagnostics.Process.Start(ms.updURL)
+        End If
+    End Sub
+
+    Private Sub Button21_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles Button21.Click
+        'Set_File_Security(GamePath.Text, True, Nothing)
+        'Exit Sub
+        Try
+            Dim tpf = IO.Path.GetTempPath
+            tpf += Application.ProductName + "说明文档.txt"
+            IO.File.Delete(tpf)
+            IO.File.WriteAllText(tpf, My.Resources.说明文档)
+            Diagnostics.Process.Start(tpf)
+
+        Catch ex As Exception
+            vMSG.Mode = ""
+            vMSG.TextBox1.Text = My.Resources.说明文档
+            vMSG.TextBox1.Select(0, 0)
+            vMSG.Show()
+        End Try
+
+
+
+    End Sub
+
+    Private Sub 检测更新ToolStripMenuItem_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles 检测更新ToolStripMenuItem.Click
+        Dim nc As New mt
+        nc.isMessage = True
+        Dim nt As New Threading.Thread(AddressOf nc.Check_for_Update)
+        nt.Start()
+    End Sub
+
+    Private Sub 禁用更新ToolStripMenuItem_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles 禁用更新ToolStripMenuItem.Click
+        If 禁用更新ToolStripMenuItem.Checked Then
+            IO.File.Create(Path_Info + "\noUpdate").Close()
+        Else
+            IO.File.Delete(Path_Info + "\noUpdate")
+        End If
+        禁用更新ToolStripMenuItem.Checked = Not 禁用更新ToolStripMenuItem.Checked
+    End Sub
 End Class
